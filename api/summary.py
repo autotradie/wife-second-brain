@@ -48,12 +48,12 @@ def group_by_category(items):
     return grouped
 
 # ── Format a single item line ─────────────────────────────────────────────────
-def format_item(item):
+def format_item(item, number):
     description = item.get("description", "").strip()
     stakeholder = item.get("stakeholder")
     due_date = item.get("due_date")
 
-    line = f"- {description}"
+    line = f"{number}. {description}"
     if stakeholder:
         line += f" ({stakeholder})"
     if due_date:
@@ -67,6 +67,7 @@ def format_item(item):
 # ── Build the full message ────────────────────────────────────────────────────
 def build_message(grouped, total):
     lines = ["Good morning ☀️", ""]
+    counter = 1
 
     for cat_key, cat_label in CATEGORY_ORDER:
         items = grouped.get(cat_key, [])
@@ -74,7 +75,8 @@ def build_message(grouped, total):
             continue
         lines.append(cat_label)
         for item in items:
-            lines.append(format_item(item))
+            lines.append(format_item(item, counter))
+            counter += 1
         lines.append("")
 
     lines.append(f"Total open items: {total}")
@@ -82,19 +84,21 @@ def build_message(grouped, total):
 
 # ── Build inline keyboard ─────────────────────────────────────────────────────
 def build_inline_keyboard(grouped):
-    """One button row per item in category order.
-    Button label: truncated description for readability.
+    """Compact numbered grid — 4 buttons per row.
     Callback payload: done:<uuid>
     """
-    rows = []
+    buttons = []
+    counter = 1
     for cat_key, _ in CATEGORY_ORDER:
         for item in grouped.get(cat_key, []):
-            description = item.get("description", "").strip()
-            label = description[:32] + "…" if len(description) > 32 else description
-            rows.append([{
-                "text": f"✅ {label}",
+            buttons.append({
+                "text": f"✅ {counter}",
                 "callback_data": f"done:{item['id']}"
-            }])
+            })
+            counter += 1
+
+    # Split into rows of 4
+    rows = [buttons[i:i+4] for i in range(0, len(buttons), 4)]
     return {"inline_keyboard": rows}
 
 # ── No items fallback ─────────────────────────────────────────────────────────
