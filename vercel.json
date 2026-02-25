@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "api/summary.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/summary",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
