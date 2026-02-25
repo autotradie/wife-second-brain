@@ -80,17 +80,36 @@ def build_message(grouped, total):
     lines.append(f"Total open items: {total}")
     return "\n".join(lines)
 
+# ── Build inline keyboard ─────────────────────────────────────────────────────
+def build_inline_keyboard(grouped):
+    """One button row per item in category order.
+    Button label: truncated description for readability.
+    Callback payload: done:<uuid>
+    """
+    rows = []
+    for cat_key, _ in CATEGORY_ORDER:
+        for item in grouped.get(cat_key, []):
+            description = item.get("description", "").strip()
+            label = description[:32] + "…" if len(description) > 32 else description
+            rows.append([{
+                "text": f"✅ {label}",
+                "callback_data": f"done:{item['id']}"
+            }])
+    return {"inline_keyboard": rows}
+
 # ── No items fallback ─────────────────────────────────────────────────────────
 def build_empty_message():
     return "Good morning ☀️\n\nNo open items."
 
 # ── Send via Telegram ─────────────────────────────────────────────────────────
-def send_telegram(message):
+def send_telegram(message, reply_markup=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     response = requests.post(url, json=payload)
     response.raise_for_status()
 
@@ -99,10 +118,12 @@ def run_summary():
     items = fetch_open_items()
     if not items:
         message = build_empty_message()
+        send_telegram(message)
     else:
         grouped = group_by_category(items)
         message = build_message(grouped, total=len(items))
-    send_telegram(message)
+        keyboard = build_inline_keyboard(grouped)
+        send_telegram(message, reply_markup=keyboard)
     return message
 
 if __name__ == "__main__":
